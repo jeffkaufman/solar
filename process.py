@@ -95,6 +95,14 @@ for record in raw_data:
 clean_data = [record for record in raw_data
               if not is_broken(record)]
 
+whmin = [record.watts for record in clean_data]
+whmin.sort()
+with open("whmin_percentiles.tsv", "w") as outf:
+  for i in range(100):
+    perc = i / 100
+    outf.write("%.2f\t%s\n" % (
+      perc, whmin[int(perc * len(whmin))]))
+
 # (y,m,d) -> total watt-minutes (total watts)
 day_watt_minutes = collections.defaultdict(int)
 for record in clean_data:
