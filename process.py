@@ -124,3 +124,46 @@ md_kWh = [
 with open("kwh_scatter.tsv", "w") as outf:
   for month, day, kWh in sorted(md_kWh):
     outf.write("%s/%s\t%.3f\n" % (month, day, kWh))
+
+
+reset_time = 5  # 5 minutes to reset after tripping
+for threshold_watts in [25, 50, 100, 200, 300, 500, 1000]:
+  threshold_records = []
+  reset_state = 0
+  for record in clean_data:
+    production = 0
+    if record.watts < threshold_watts:
+      reset_state = reset_time
+    elif reset_state > 0:
+      reset_state -= 1
+    else:
+      production = 1
+    threshold_records.append(Record(
+      record.year, record.month, record.day,
+      record.hr, record.mn, production))
+
+  threshold_day_minutes = collections.defaultdict(int)
+  for record in threshold_records:
+    if record.watts:
+      threshold_day_minutes[record.year, record.month, record.day] += 1
+
+  threshold_hr_day = [
+    (threshold_minutes / 60, year, month, day)
+    for ((year, month, day), threshold_minutes)
+    in threshold_day_minutes.items()]
+  
+  with open("threshold_percentiles_%s.tsv" % threshold_watts, "w") as outf:
+    for i, (threshold_hours, year, month, day) in enumerate(
+        sorted(threshold_hr_day)):
+      outf.write("%.2f\t%.3f\t%s-%s-%s\n" % (
+        i / len(threshold_hr_day),
+        threshold_hours, year, month, day))
+
+  md_threshold_hr = [
+    (month, day, threshold_minutes / 60)
+    for ((year, month, day), threshold_minutes)
+    in threshold_day_minutes.items()]
+
+  with open("threshold_scatter_%s.tsv" % threshold_watts, "w") as outf:
+    for month, day, threshold_hours in sorted(md_threshold_hr):
+      outf.write("%s/%s\t%.3f\n" % (month, day, threshold_hours))
